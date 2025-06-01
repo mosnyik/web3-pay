@@ -1,0 +1,20 @@
+User-agent: *
+Allow: /
+
+# Sitemap
+Sitemap: https://web3pay.example.com/sitemap.xml
+
+# Disallow admin and API routes
+Disallow: /api/
+Disallow: /admin/
+Disallow: /_next/
+Disallow: /private/
+
+# Allow specific important pages
+Allow: /
+Allow: /checkout
+Allow: /transactions
+Allow: /tron-tokens
+
+# Crawl delay (optional)
+Crawl-delay: 1
