@@ -11,18 +11,30 @@ import { useEthereumWallet } from "@/lib/wallet/use-ethereum-wallet"
 import { EthereumWalletConnect } from "@/components/ethereum-wallet-connect"
 import { WalletInstallationIndicator } from "@/components/wallet-installation-indicator"
 import { TronWalletStatus } from "@/components/tron-wallet-status"
+import { EthereumIcon, BitcoinIcon, SolanaIcon, TronIcon } from "@/components/icons/chain-icons"
+import { WalletIcon } from "@/components/icons/wallet-icons"
 import type { WalletInfo } from "@/lib/wallet/types"
+import { isChainEnabled } from "@/lib/config/app"
+
+const CHAIN_ICONS: Record<string, React.ComponentType<{ size?: number }>> = {
+  ethereum: EthereumIcon,
+  bitcoin:  BitcoinIcon,
+  solana:   SolanaIcon,
+  tron:     TronIcon,
+}
 
 interface WalletConnectModalProps {
   isOpen: boolean
   onClose: () => void
+  /** When set, skips the chain picker and locks to this chain's wallets */
+  lockedChainId?: string
 }
 
-export function WalletConnectModal({ isOpen, onClose }: WalletConnectModalProps) {
+export function WalletConnectModal({ isOpen, onClose, lockedChainId }: WalletConnectModalProps) {
   const { adapters, connect, status } = useWallet()
   const { isEthereumActive } = useEthereumWallet()
 
-  const [selectedAdapterId, setSelectedAdapterId] = useState<string | null>(null)
+  const [selectedAdapterId, setSelectedAdapterId] = useState<string | null>(lockedChainId ?? null)
   const [isConnecting, setIsConnecting] = useState<string | null>(null)
   const [connectionError, setConnectionError] = useState<string | null>(null)
 
@@ -72,31 +84,43 @@ export function WalletConnectModal({ isOpen, onClose }: WalletConnectModalProps)
     setConnectionError(null)
   }
 
-  // Refresh installation status when modal opens
+  // Sync lockedChainId into state whenever modal opens or lock changes
   useEffect(() => {
     if (isOpen) {
+      setSelectedAdapterId(lockedChainId ?? null)
+      setConnectionError(null)
       Object.values(adapters).forEach((adapter) => {
         if ("refreshInstallationStatus" in adapter) {
           ;(adapter as any).refreshInstallationStatus()
         }
       })
     }
-  }, [isOpen, adapters])
+  }, [isOpen, lockedChainId, adapters])
 
   const selectedAdapter = selectedAdapterId ? adapters[selectedAdapterId] : null
+
+  // When a chain is locked, back button returns to chain picker only if not locked
+  const canGoBack = !!selectedAdapter && !lockedChainId
+
+  // Only show chains that have a merchant address configured
+  const enabledAdapters = Object.values(adapters).filter((a) => isChainEnabled(a.id))
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-2xl max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <div className="flex items-center gap-2">
-            {selectedAdapter && (
+            {canGoBack && (
               <Button variant="ghost" size="icon" onClick={handleBack} className="h-8 w-8">
                 <ArrowLeft className="w-4 h-4" />
               </Button>
             )}
             <DialogTitle className="text-2xl font-bold">
-              {selectedAdapter ? `Connect to ${selectedAdapter.name}` : "Select Network"}
+              {selectedAdapter
+                ? lockedChainId
+                  ? `Connect ${selectedAdapter.name} Wallet`
+                  : `Connect to ${selectedAdapter.name}`
+                : "Select Network"}
             </DialogTitle>
             {selectedAdapter && (
               <Button variant="ghost" size="icon" onClick={handleRefreshInstallation} className="h-8 w-8 ml-auto">
@@ -104,6 +128,11 @@ export function WalletConnectModal({ isOpen, onClose }: WalletConnectModalProps)
               </Button>
             )}
           </div>
+          {lockedChainId && selectedAdapter && (
+            <p className="text-sm text-slate-500 mt-1">
+              You selected {selectedAdapter.name} as payment network — only {selectedAdapter.name} wallets are shown.
+            </p>
+          )}
         </DialogHeader>
 
         {!selectedAdapter ? (
@@ -114,7 +143,7 @@ export function WalletConnectModal({ isOpen, onClose }: WalletConnectModalProps)
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {Object.values(adapters).map((adapter) => (
+              {enabledAdapters.map((adapter) => (
                 <Card
                   key={adapter.id}
                   className="hover:shadow-md transition-all duration-200 cursor-pointer group border-2 hover:border-primary/20"
@@ -122,10 +151,8 @@ export function WalletConnectModal({ isOpen, onClose }: WalletConnectModalProps)
                 >
                   <CardContent className="p-6">
                     <div className="flex items-center gap-4">
-                      <div
-                        className={`w-12 h-12 bg-${adapter.id === "ethereum" ? "blue" : adapter.id === "bitcoin" ? "orange" : adapter.id === "solana" ? "purple" : "red"}-500 rounded-full flex items-center justify-center text-white text-xl font-bold`}
-                      >
-                        {adapter.icon}
+                      <div className="w-12 h-12 rounded-full bg-slate-800 flex items-center justify-center">
+                        {(() => { const Icon = CHAIN_ICONS[adapter.id]; return Icon ? <Icon size={28} /> : null })()}
                       </div>
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-1">
@@ -234,8 +261,8 @@ export function WalletConnectModal({ isOpen, onClose }: WalletConnectModalProps)
                 >
                   <CardContent className="p-4">
                     <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 bg-muted rounded-full flex items-center justify-center text-2xl">
-                        {wallet.icon}
+                      <div className="w-12 h-12 rounded-full flex items-center justify-center overflow-hidden">
+                        <WalletIcon walletId={wallet.id} size={44} />
                       </div>
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-1">

@@ -1,6 +1,7 @@
 import type { WalletAdapter, WalletAccount, WalletInfo, ConnectOptions } from "../types"
 import { TRC20Helper, type TokenBalance } from "../tron/trc20-helper"
 import { TRC20_TOKENS, type TRC20Token } from "../tron/trc20-tokens"
+import { getEnabledWallets } from "@/lib/config/app"
 
 // TronWeb types
 interface TronWebInstance {
@@ -53,6 +54,42 @@ const isTronLinkLoggedIn = (): boolean => {
   return !!(tronWeb && tronWeb.ready && tronWeb.defaultAddress && tronWeb.defaultAddress.base58)
 }
 
+// Full wallet catalogue — filtered by config at runtime
+const ALL_TRON_WALLETS: WalletInfo[] = [
+  {
+    id: "tronlink",
+    name: "TronLink",
+    icon: "🔗",
+    description: "Official Tron wallet extension",
+    downloadUrl: "https://www.tronlink.org/",
+    isInstalled: isTronLinkInstalled(),
+  },
+  {
+    id: "trust",
+    name: "Trust Wallet",
+    icon: "🛡️",
+    description: "Multi-chain mobile wallet with Tron support",
+    downloadUrl: "https://trustwallet.com/",
+    isInstalled: isTrustWalletInstalled(),
+  },
+  {
+    id: "math",
+    name: "Math Wallet",
+    icon: "🧮",
+    description: "Multi-platform crypto wallet",
+    downloadUrl: "https://mathwallet.org/",
+    isInstalled: isMathWalletInstalled(),
+  },
+  {
+    id: "klever",
+    name: "Klever",
+    icon: "💎",
+    description: "Crypto wallet & exchange platform",
+    downloadUrl: "https://klever.io/",
+    isInstalled: isKleverInstalled(),
+  },
+]
+
 export class TronAdapter implements WalletAdapter {
   id = "tron"
   name = "Tron"
@@ -64,40 +101,9 @@ export class TronAdapter implements WalletAdapter {
   private trc20Helper: TRC20Helper | null = null
   private tokenBalances: TokenBalance[] = []
 
-  supportedWallets: WalletInfo[] = [
-    {
-      id: "tronlink",
-      name: "TronLink",
-      icon: "🔗",
-      description: "Official Tron wallet extension",
-      downloadUrl: "https://www.tronlink.org/",
-      isInstalled: isTronLinkInstalled(),
-    },
-    {
-      id: "trust",
-      name: "Trust Wallet",
-      icon: "🛡️",
-      description: "Multi-chain mobile wallet with Tron support",
-      downloadUrl: "https://trustwallet.com/",
-      isInstalled: isTrustWalletInstalled(),
-    },
-    {
-      id: "math",
-      name: "Math Wallet",
-      icon: "🧮",
-      description: "Multi-platform crypto wallet",
-      downloadUrl: "https://mathwallet.org/",
-      isInstalled: isMathWalletInstalled(),
-    },
-    {
-      id: "klever",
-      name: "Klever",
-      icon: "💎",
-      description: "Crypto wallet & exchange platform",
-      downloadUrl: "https://klever.io/",
-      isInstalled: isKleverInstalled(),
-    },
-  ]
+  supportedWallets: WalletInfo[] = ALL_TRON_WALLETS.filter((w) =>
+    getEnabledWallets("tron").includes(w.id),
+  )
 
   async connect(options?: ConnectOptions): Promise<WalletAccount> {
     const walletId = options?.walletId || this.supportedWallets[0].id

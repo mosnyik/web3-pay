@@ -2,7 +2,8 @@ import { seoConfig, pageConfigs } from "@/lib/config/seo"
 
 // Server-safe function to get page-specific SEO config
 export function getPageSEO(page: keyof typeof pageConfigs) {
-  return pageConfigs[page]
+  const cfg = pageConfigs[page]
+  return { ...cfg, keywords: [...cfg.keywords] }
 }
 
 // Server-safe function to generate metadata

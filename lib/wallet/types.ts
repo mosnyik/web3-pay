@@ -67,4 +67,5 @@ export interface WalletContextType {
   connect(adapterId: string, options?: ConnectOptions): Promise<WalletAccount | null>
   disconnect(): Promise<void>
   switchAdapter(adapterId: string): Promise<void>
+  setAccount(adapterId: string, account: WalletAccount | null): void
 }

@@ -1,15 +1,20 @@
 import type { WalletAdapter, WalletAccount, WalletInfo, ConnectOptions } from "../types"
+import { getEnabledWallets } from "@/lib/config/app"
+import { useBTCWalletStore } from "@/stores/btc-wallet-store"
 
-// Types for sats-connect
-interface SatsConnectOptions {
-  onFinish: (response: any) => void
-  onCancel: () => void
-  payload: {
-    purposes: string[]
-    message: string
-    network: {
-      type: "Mainnet" | "Testnet"
-    }
+// ── Real balance via mempool.space ────────────────────────────────────────────
+async function fetchBitcoinBalance(address: string): Promise<string> {
+  try {
+    const res = await fetch(`https://mempool.space/api/address/${address}`)
+    if (!res.ok) throw new Error("mempool.space request failed")
+    const data = await res.json()
+    const confirmed = data?.chain_stats?.funded_txo_sum - data?.chain_stats?.spent_txo_sum
+    const unconfirmed = data?.mempool_stats?.funded_txo_sum - data?.mempool_stats?.spent_txo_sum
+    const totalSats = (confirmed ?? 0) + (unconfirmed ?? 0)
+    return `${(totalSats / 100_000_000).toFixed(8)} BTC`
+  } catch (err) {
+    console.warn("Failed to fetch Bitcoin balance:", err)
+    return "0 BTC"
   }
 }
 
@@ -17,10 +22,6 @@ interface BitcoinAddress {
   address: string
   publicKey: string
   purpose: string
-}
-
-interface ConnectResponse {
-  addresses: BitcoinAddress[]
 }
 
 // Wallet detection functions
@@ -39,6 +40,34 @@ const isUnisatInstalled = (): boolean => {
   return !!(window as any).unisat
 }
 
+// Full wallet catalogue — filtered by config at runtime
+const ALL_BITCOIN_WALLETS: WalletInfo[] = [
+  {
+    id: "xverse",
+    name: "Xverse",
+    icon: "⚡",
+    description: "Bitcoin & Stacks wallet with Ordinals support",
+    downloadUrl: "https://www.xverse.app/",
+    isInstalled: isXverseInstalled(),
+  },
+  {
+    id: "unisat",
+    name: "Unisat",
+    icon: "🌟",
+    description: "Bitcoin wallet for Ordinals and BRC-20",
+    downloadUrl: "https://unisat.io/",
+    isInstalled: isUnisatInstalled(),
+  },
+  {
+    id: "hiro",
+    name: "Hiro Wallet (Leather)",
+    icon: "🔥",
+    description: "Bitcoin & Stacks wallet for Web3",
+    downloadUrl: "https://leather.io/",
+    isInstalled: isHiroInstalled(),
+  },
+]
+
 export class BitcoinAdapter implements WalletAdapter {
   id = "bitcoin"
   name = "Bitcoin"
@@ -48,32 +77,9 @@ export class BitcoinAdapter implements WalletAdapter {
   private walletId: string | null = null
   private connectedAddresses: BitcoinAddress[] = []
 
-  supportedWallets: WalletInfo[] = [
-    {
-      id: "xverse",
-      name: "Xverse",
-      icon: "⚡",
-      description: "Bitcoin & Stacks wallet with Ordinals support",
-      downloadUrl: "https://www.xverse.app/",
-      isInstalled: isXverseInstalled(),
-    },
-    {
-      id: "hiro",
-      name: "Hiro Wallet (Leather)",
-      icon: "🔥",
-      description: "Bitcoin & Stacks wallet for Web3",
-      downloadUrl: "https://leather.io/",
-      isInstalled: isHiroInstalled(),
-    },
-    {
-      id: "unisat",
-      name: "Unisat",
-      icon: "🌟",
-      description: "Bitcoin wallet for Ordinals and BRC-20",
-      downloadUrl: "https://unisat.io/",
-      isInstalled: isUnisatInstalled(),
-    },
-  ]
+  supportedWallets: WalletInfo[] = ALL_BITCOIN_WALLETS.filter((w) =>
+    getEnabledWallets("bitcoin").includes(w.id),
+  )
 
   async connect(options?: ConnectOptions): Promise<WalletAccount> {
     const walletId = options?.walletId || this.supportedWallets[0].id
@@ -128,9 +134,9 @@ export class BitcoinAdapter implements WalletAdapter {
 
         const account: WalletAccount = {
           address: mockAddress,
-          displayName: `${wallet.name} (Demo)`,
+          displayName: `${wallet.name} (Demo — wallet not installed)`,
           displayAddress: `${mockAddress.substring(0, 6)}...${mockAddress.substring(mockAddress.length - 4)}`,
-          balance: "0.05 BTC",
+          balance: "N/A",
           networkName: "Bitcoin",
         }
 
@@ -143,67 +149,48 @@ export class BitcoinAdapter implements WalletAdapter {
   }
 
   private async connectXverse(): Promise<WalletAccount> {
-    return new Promise((resolve, reject) => {
-      try {
-        // Dynamic import to avoid SSR issues
-        import("sats-connect")
-          .then(({ getAddress }) => {
-            const connectOptions: SatsConnectOptions = {
-              onFinish: (response: ConnectResponse) => {
-                try {
-                  if (!response.addresses || response.addresses.length === 0) {
-                    reject(new Error("No addresses returned from Xverse"))
-                    return
-                  }
+    const { request, AddressPurpose } = await import("sats-connect")
 
-                  this.connectedAddresses = response.addresses
-
-                  // Use the first payment address (P2WPKH or P2TR)
-                  const paymentAddress = response.addresses.find(
-                    (addr) => addr.purpose === "payment" || addr.purpose === "ordinals",
-                  )
-
-                  if (!paymentAddress) {
-                    reject(new Error("No payment address found"))
-                    return
-                  }
-
-                  const account: WalletAccount = {
-                    address: paymentAddress.address,
-                    displayName: "Xverse Wallet",
-                    displayAddress: `${paymentAddress.address.substring(0, 6)}...${paymentAddress.address.substring(
-                      paymentAddress.address.length - 4,
-                    )}`,
-                    networkName: "Bitcoin",
-                    balance: "0.05 BTC", // Mock balance for demo
-                  }
-
-                  resolve(account)
-                } catch (error) {
-                  reject(error)
-                }
-              },
-              onCancel: () => {
-                reject(new Error("User cancelled connection"))
-              },
-              payload: {
-                purposes: ["ordinals", "payment"],
-                message: "Connect to Web3 Payment Gateway",
-                network: {
-                  type: "Mainnet",
-                },
-              },
-            }
-
-            getAddress(connectOptions)
-          })
-          .catch((error) => {
-            reject(new Error(`Failed to load sats-connect: ${error.message}`))
-          })
-      } catch (error) {
-        reject(error)
-      }
+    const response = await request("getAccounts", {
+      purposes: [AddressPurpose.Payment, AddressPurpose.Ordinals, AddressPurpose.Stacks],
+      message: "Connect to Web3 Payment Gateway",
     })
+
+    if (response.status !== "success") {
+      throw new Error(response.error?.message ?? "Xverse connection cancelled")
+    }
+
+    const addresses = response.result
+    const paymentAddr = addresses.find((a) => a.purpose === AddressPurpose.Payment)
+    const ordinalsAddr = addresses.find((a) => a.purpose === AddressPurpose.Ordinals)
+    const stacksAddr = addresses.find((a) => a.purpose === AddressPurpose.Stacks)
+
+    const addr = paymentAddr?.address ?? ordinalsAddr?.address
+    if (!addr) throw new Error("No payment address returned from Xverse")
+
+    // Store all addresses in the Zustand store for later use (e.g. Ordinals)
+    useBTCWalletStore.getState().setWallet({
+      walletId: "xverse",
+      paymentAddress: paymentAddr?.address ?? "",
+      ordinalsAddress: ordinalsAddr?.address ?? "",
+      stacksAddress: stacksAddr?.address ?? "",
+      publicKey: paymentAddr?.publicKey ?? "",
+    })
+
+    this.connectedAddresses = addresses.map((a) => ({
+      address: a.address,
+      publicKey: a.publicKey ?? "",
+      purpose: a.purpose,
+    }))
+
+    const balance = await fetchBitcoinBalance(addr)
+    return {
+      address: addr,
+      displayName: "Xverse Wallet",
+      displayAddress: `${addr.substring(0, 6)}...${addr.substring(addr.length - 4)}`,
+      networkName: "Bitcoin",
+      balance,
+    }
   }
 
   private async connectHiro(): Promise<WalletAccount> {
@@ -233,17 +220,21 @@ export class BitcoinAdapter implements WalletAdapter {
               return
             }
 
-            const account: WalletAccount = {
-              address: paymentAddress.address,
-              displayName: "Hiro Wallet",
-              displayAddress: `${paymentAddress.address.substring(0, 6)}...${paymentAddress.address.substring(
-                paymentAddress.address.length - 4,
-              )}`,
-              networkName: "Bitcoin",
-              balance: "0.03 BTC", // Mock balance for demo
-            }
-
-            resolve(account)
+            const addr = paymentAddress.address
+            useBTCWalletStore.getState().setWallet({
+              walletId: "hiro",
+              paymentAddress: addr,
+              ordinalsAddress: addr,
+            })
+            fetchBitcoinBalance(addr).then((balance) => {
+              resolve({
+                address: addr,
+                displayName: "Hiro Wallet",
+                displayAddress: `${addr.substring(0, 6)}...${addr.substring(addr.length - 4)}`,
+                networkName: "Bitcoin",
+                balance,
+              })
+            })
           })
           .catch((error: any) => {
             reject(new Error(`Hiro Wallet connection failed: ${error.message}`))
@@ -281,6 +272,12 @@ export class BitcoinAdapter implements WalletAdapter {
               networkName: "Bitcoin",
             }
 
+            useBTCWalletStore.getState().setWallet({
+              walletId: "unisat",
+              paymentAddress: address,
+              ordinalsAddress: address,
+            })
+
             // Get balance if available
             unisat
               .getBalance()
@@ -289,8 +286,7 @@ export class BitcoinAdapter implements WalletAdapter {
                 resolve(account)
               })
               .catch(() => {
-                // If balance fails, still resolve with account
-                account.balance = "0.02 BTC" // Mock balance for demo
+                account.balance = "0 BTC"
                 resolve(account)
               })
           })
@@ -307,9 +303,9 @@ export class BitcoinAdapter implements WalletAdapter {
     this.account = null
     this.walletId = null
     this.connectedAddresses = []
-
-    // Note: Most Bitcoin wallets don't have a programmatic disconnect method
-    // The user needs to disconnect from the wallet extension directly
+    useBTCWalletStore.getState().disconnect()
+    // Most Bitcoin wallets don't have a programmatic disconnect method —
+    // the user disconnects from the extension directly.
   }
 
   async getAccount(): Promise<WalletAccount | null> {
@@ -337,28 +333,15 @@ export class BitcoinAdapter implements WalletAdapter {
             return await unisat.signMessage(message)
           }
           break
-        case "xverse":
-          // For Xverse, we'd use sats-connect signMessage
-          const { signMessage } = await import("sats-connect")
-          return new Promise((resolve, reject) => {
-            signMessage({
-              payload: {
-                network: {
-                  type: "Mainnet",
-                },
-                address: this.account!.address,
-                message,
-              },
-              onFinish: (response: any) => {
-                if (response.signature) {
-                  resolve(response.signature)
-                } else {
-                  reject(new Error("No signature returned"))
-                }
-              },
-              onCancel: () => reject(new Error("User cancelled signing")),
-            })
+        case "xverse": {
+          const { request: satsRequest } = await import("sats-connect")
+          const res = await satsRequest("signMessage", {
+            address: this.account!.address,
+            message,
           })
+          if (res.status === "success") return res.result.signature
+          throw new Error(res.error?.message ?? "Xverse signing cancelled")
+        }
         case "hiro":
           const btcProvider = (window as any).btc || (window as any).LeatherProvider
           if (btcProvider) {
