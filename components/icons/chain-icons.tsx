@@ -41,52 +41,38 @@ export function SolanaIcon({ size = 24, ...props }: IconProps) {
   )
 }
 
-export function TronIcon({ size = 24, ...props }: IconProps) {
+export function TronIcon({ size = 24 }: { size?: number }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" {...props}>
-      <path d="M12 2L21 8L17 20H7L3 8L12 2Z" fill="#FF0013" fillOpacity="0.15" stroke="#FF0013" strokeWidth="1.5"/>
-      <path d="M12 5L18 9L12 18L6 9L12 5Z" fill="#FF0013"/>
-      <path d="M12 5L18 9H6L12 5Z" fill="#FF4444"/>
-    </svg>
+    <img
+      src={`https://img.icons8.com/?size=${size * 2}&id=7NCvsu15urpd&format=png`}
+      alt="Tron"
+      width={size}
+      height={size}
+      style={{ display: "inline-block" }}
+    />
   )
 }
 
-export function PolygonIcon({ size = 24, ...props }: IconProps) {
+export function PolygonIcon({ size = 24 }: { size?: number }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" {...props}>
-      <path
-        d="M16.5 9.5L12 7L7.5 9.5V14.5L12 17L16.5 14.5V9.5Z"
-        stroke="#8247E5"
-        strokeWidth="1.5"
-        fill="none"
-      />
-      <path
-        d="M12 7L16.5 9.5M16.5 9.5V14.5M16.5 14.5L12 17M12 17L7.5 14.5M7.5 14.5V9.5M7.5 9.5L12 7"
-        stroke="#8247E5"
-        strokeWidth="1.5"
-      />
-      <circle cx="12" cy="12" r="2" fill="#8247E5"/>
-      <circle cx="16.5" cy="9.5" r="1.5" fill="#8247E5"/>
-      <circle cx="16.5" cy="14.5" r="1.5" fill="#8247E5"/>
-      <circle cx="12" cy="17" r="1.5" fill="#8247E5"/>
-      <circle cx="7.5" cy="14.5" r="1.5" fill="#8247E5"/>
-      <circle cx="7.5" cy="9.5" r="1.5" fill="#8247E5"/>
-      <circle cx="12" cy="7" r="1.5" fill="#8247E5"/>
-    </svg>
+    <img
+      src="https://logo.svgcdn.com/token-branded/polygon.png"
+      alt="Polygon"
+      width={size}
+      height={size}
+      style={{ display: "inline-block" }}
+    />
   )
 }
 
-export function BnbIcon({ size = 24, ...props }: IconProps) {
+export function BnbIcon({ size = 24 }: { size?: number }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" {...props}>
-      <path d="M12 3L14.5 7.5H9.5L12 3Z" fill="#F3BA2F"/>
-      <path d="M12 21L9.5 16.5H14.5L12 21Z" fill="#F3BA2F"/>
-      <path d="M3 12L5.5 9.5L8 12L5.5 14.5L3 12Z" fill="#F3BA2F"/>
-      <path d="M21 12L18.5 14.5L16 12L18.5 9.5L21 12Z" fill="#F3BA2F"/>
-      <path d="M9.5 10L12 7.5L14.5 10L12 12.5L9.5 10Z" fill="#F3BA2F"/>
-      <path d="M7 12L9.5 14.5L12 12L9.5 9.5L7 12Z" fill="#F3BA2F"/>
-      <path d="M12 11.5L14.5 14L12 16.5L9.5 14L12 11.5Z" fill="#F3BA2F"/>
-      <path d="M14.5 9.5L17 12L14.5 14.5L12 12L14.5 9.5Z" fill="#F3BA2F"/>
-    </svg>
+    <img
+      src="https://img.icons8.com/?size=64&id=axJ7sXBmQS2g&format=png"
+      alt="BNB"
+      width={size}
+      height={size}
+      style={{ display: "inline-block" }}
+    />
   )
 }
