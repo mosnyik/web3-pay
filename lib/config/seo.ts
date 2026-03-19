@@ -79,4 +79,9 @@ export const pageConfigs = {
     description: "Manage your TRC-20 tokens including USDT, USDC, and more on the Tron blockchain.",
     keywords: ["tron tokens", "trc-20", "usdt tron", "tron wallet", "tron blockchain"],
   },
+  paymentStatus: {
+    title: "Payment Status",
+    description: "Track your crypto payment transaction status in real-time on the blockchain.",
+    keywords: ["payment status", "crypto transaction", "blockchain confirmation", "payment tracking"],
+  },
 } as const

@@ -22,8 +22,8 @@ export function WalletConnectStandalone({
   const [isModalOpen, setIsModalOpen] = useState(false)
   const { account, disconnect, status } = useWallet()
 
-  const isConnected = status === "connected" || status === "authenticated"
-  const isConnecting = status === "connecting" || status === "authenticating"
+  const isConnected = status === "connected"
+  const isConnecting = status === "connecting"
 
   useEffect(() => {
     if (isConnected && account && onConnect) {

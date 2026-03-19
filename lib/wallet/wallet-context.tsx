@@ -24,7 +24,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   // State
   const [activeAdapter, setActiveAdapter] = useState<WalletAdapter | null>(null)
   const [status, setStatus] = useState<WalletStatus>("disconnected")
-  const [account, setAccount] = useState<WalletAccount | null>(null)
+  const [account, setAccount_internal] = useState<WalletAccount | null>(null)
   const [error, setError] = useState<Error | null>(null)
 
   // Connect to a wallet
@@ -41,7 +41,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       const account = await adapter.connect(options)
 
       setActiveAdapter(adapter)
-      setAccount(account)
+      setAccount_internal(account)
       setStatus("connected")
 
       // Save state for persistence
@@ -63,7 +63,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       }
 
       setActiveAdapter(null)
-      setAccount(null)
+      setAccount_internal(null)
       setStatus("disconnected")
 
       // Clear saved state
@@ -103,7 +103,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
 
             if (account) {
               setActiveAdapter(adapter)
-              setAccount(account)
+              setAccount_internal(account)
               setStatus("connected")
             } else {
               // If no account, try to connect with saved wallet ID
@@ -122,6 +122,20 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     loadSavedState()
   }, [])
 
+  // Allow external hooks (e.g. useEthereumWallet) to push account state in
+  const setAccount = (adapterId: string, account: WalletAccount | null) => {
+    const adapter = adapters[adapterId]
+    if (!adapter) return
+    if (account) {
+      setActiveAdapter(adapter)
+      setStatus("connected")
+      setAccount_internal(account)
+    } else {
+      setStatus("disconnected")
+      setAccount_internal(null)
+    }
+  }
+
   const value: WalletContextType = {
     adapters,
     activeAdapter,
@@ -131,6 +145,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     connect,
     disconnect,
     switchAdapter,
+    setAccount,
   }
 
   return <WalletContext.Provider value={value}>{children}</WalletContext.Provider>

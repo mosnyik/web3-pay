@@ -1,13 +1,12 @@
 "use client"
 
-import { useEffect, useState } from "react"
-import { useAccount, useDisconnect, useChainId, useSwitchChain } from "wagmi"
+import { useEffect } from "react"
+import { useAccount, useDisconnect, useChainId, useSwitchChain, useBalance } from "wagmi"
 import { mainnet, polygon, optimism, arbitrum, sepolia } from "wagmi/chains"
 import { useWallet } from "@/lib/wallet/wallet-context"
 import type { WalletAccount } from "@/lib/wallet/types"
 import type { EthereumAdapter } from "@/lib/wallet/adapters/ethereum-adapter"
 
-// Map of chain IDs to names
 const chainNames: Record<number, string> = {
   [mainnet.id]: "Ethereum",
   [polygon.id]: "Polygon",
@@ -22,65 +21,62 @@ export function useEthereumWallet() {
   const chainId = useChainId()
   const { disconnect } = useDisconnect()
   const { switchChain } = useSwitchChain()
-  const [isEthereumActive, setIsEthereumActive] = useState(false)
 
-  // Get the Ethereum adapter
+  // Read real on-chain ETH balance via wagmi
+  const { data: balanceData } = useBalance({
+    address,
+    query: { enabled: isConnected && !!address },
+  })
+
   const ethereumAdapter = adapters.ethereum as EthereumAdapter
 
-  // Update the wallet context when the Ethereum wallet state changes
   useEffect(() => {
     if (isConnected && address) {
       const networkName = chainNames[chainId] || `Chain ${chainId}`
+      const balance = balanceData
+        ? `${parseFloat(balanceData.formatted).toFixed(4)} ${balanceData.symbol}`
+        : undefined
 
-      // Create a wallet account object
       const account: WalletAccount = {
         address,
         displayName: "Ethereum Wallet",
         displayAddress: `${address.substring(0, 6)}...${address.substring(address.length - 4)}`,
+        balance,
         networkName,
+        chainId,
       }
 
-      // Update the adapter's internal state
       if (ethereumAdapter) {
         ethereumAdapter._setAccount(account)
         ethereumAdapter._setWalletId("ethereum")
         ethereumAdapter._setChainId(chainId)
       }
 
-      // Update the wallet context
       setAccount("ethereum", account)
-      setIsEthereumActive(true)
     } else {
-      // Clear the adapter's internal state
       if (ethereumAdapter) {
         ethereumAdapter._setAccount(null)
         ethereumAdapter._setWalletId(null)
         ethereumAdapter._setChainId(null)
       }
-
-      setIsEthereumActive(false)
+      setAccount("ethereum", null)
     }
-  }, [address, isConnected, chainId, ethereumAdapter, setAccount])
+  }, [address, isConnected, chainId, balanceData, ethereumAdapter, setAccount])
 
-  // Handle disconnect
   const handleDisconnect = async () => {
     try {
       await disconnect()
-
-      // Clear the adapter's internal state
       if (ethereumAdapter) {
         ethereumAdapter._setAccount(null)
         ethereumAdapter._setWalletId(null)
         ethereumAdapter._setChainId(null)
       }
-
-      setIsEthereumActive(false)
+      setAccount("ethereum", null)
     } catch (error) {
       console.error("Failed to disconnect Ethereum wallet:", error)
     }
   }
 
-  // Handle chain switch
   const handleSwitchChain = async (chainId: number) => {
     try {
       await switchChain({ chainId })
@@ -90,7 +86,7 @@ export function useEthereumWallet() {
   }
 
   return {
-    isEthereumActive,
+    isEthereumActive: isConnected && !!address,
     disconnect: handleDisconnect,
     switchChain: handleSwitchChain,
     chainId,

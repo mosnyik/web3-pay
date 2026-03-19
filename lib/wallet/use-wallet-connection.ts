@@ -133,7 +133,7 @@ export function useWalletConnection(): UseWalletConnectionResult {
       // Sign message with wallet
       let signature: string
 
-      if ("signMessage" in activeAdapter) {
+      if ("signMessage" in activeAdapter && typeof activeAdapter.signMessage === "function") {
         signature = await activeAdapter.signMessage(message)
       } else {
         throw new Error("This wallet does not support message signing")

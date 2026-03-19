@@ -1,4 +1,32 @@
 import type { WalletAdapter, WalletAccount, WalletInfo, ConnectOptions } from "../types"
+import { getEnabledWallets } from "@/lib/config/app"
+
+// Full wallet catalogue — filtered by config at runtime
+const ALL_ETHEREUM_WALLETS: WalletInfo[] = [
+  {
+    id: "metamask",
+    name: "MetaMask",
+    icon: "🦊",
+    description: "Most popular Ethereum wallet",
+    downloadUrl: "https://metamask.io/download/",
+    isInstalled: typeof window !== "undefined" && !!(window as any).ethereum?.isMetaMask,
+  },
+  {
+    id: "walletconnect",
+    name: "WalletConnect",
+    icon: "🔗",
+    description: "Connect with 300+ wallets",
+    downloadUrl: "https://walletconnect.com/",
+  },
+  {
+    id: "coinbase",
+    name: "Coinbase Wallet",
+    icon: "🔵",
+    description: "Self-custody wallet by Coinbase",
+    downloadUrl: "https://www.coinbase.com/wallet",
+    isInstalled: typeof window !== "undefined" && !!(window as any).ethereum?.isCoinbaseWallet,
+  },
+]
 
 // This is a wrapper around RainbowKit/wagmi
 export class EthereumAdapter implements WalletAdapter {
@@ -10,31 +38,9 @@ export class EthereumAdapter implements WalletAdapter {
   private walletId: string | null = null
   private chainId: string | number | null = null
 
-  supportedWallets: WalletInfo[] = [
-    {
-      id: "metamask",
-      name: "MetaMask",
-      icon: "🦊",
-      description: "Most popular Ethereum wallet",
-      downloadUrl: "https://metamask.io/download/",
-      isInstalled: typeof window !== "undefined" && !!(window as any).ethereum?.isMetaMask,
-    },
-    {
-      id: "walletconnect",
-      name: "WalletConnect",
-      icon: "🔗",
-      description: "Connect with 300+ wallets",
-      downloadUrl: "https://walletconnect.com/",
-    },
-    {
-      id: "coinbase",
-      name: "Coinbase Wallet",
-      icon: "🔵",
-      description: "Self-custody wallet by Coinbase",
-      downloadUrl: "https://www.coinbase.com/wallet",
-      isInstalled: typeof window !== "undefined" && !!(window as any).ethereum?.isCoinbaseWallet,
-    },
-  ]
+  supportedWallets: WalletInfo[] = ALL_ETHEREUM_WALLETS.filter((w) =>
+    getEnabledWallets("ethereum").includes(w.id),
+  )
 
   // Note: This adapter is meant to be used with the useWallet hook
   // which will provide the wagmi hooks. This is just the interface.

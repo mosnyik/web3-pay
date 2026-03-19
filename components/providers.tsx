@@ -2,6 +2,7 @@
 
 import type React from "react"
 
+import { useState } from "react"
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import { WagmiProvider } from "wagmi"
 import { RainbowKitProvider, darkTheme, lightTheme } from "@rainbow-me/rainbowkit"
@@ -10,9 +11,8 @@ import { config } from "@/lib/wagmi"
 import { WalletProvider } from "@/lib/wallet/wallet-context"
 import "@rainbow-me/rainbowkit/styles.css"
 
-const queryClient = new QueryClient()
-
 export function Providers({ children }: { children: React.ReactNode }) {
+  const [queryClient] = useState(() => new QueryClient())
   const { theme } = useTheme()
 
   return (

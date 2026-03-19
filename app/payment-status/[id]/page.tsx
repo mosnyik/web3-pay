@@ -4,30 +4,32 @@ import { getPageSEO } from "@/lib/utils/seo-utils"
 import { SEO } from "@/components/seo"
 import type { Metadata } from "next"
 
-export async function generateMetadata({ params }: { params: { id: string } }): Promise<Metadata> {
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
+  const { id } = await params
   const pageSEO = getPageSEO("paymentStatus")
 
   return {
-    title: `${pageSEO.title} - ${params.id}`,
+    title: `${pageSEO.title} - ${id}`,
     description: pageSEO.description,
     keywords: pageSEO.keywords,
   }
 }
 
-export default function PaymentStatus({ params }: { params: { id: string } }) {
+export default async function PaymentStatus({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
   const pageSEO = getPageSEO("paymentStatus")
 
   return (
     <>
       <SEO
-        title={`${pageSEO.title} - ${params.id}`}
+        title={`${pageSEO.title} - ${id}`}
         description={pageSEO.description}
         keywords={pageSEO.keywords}
-        url={`/payment-status/${params.id}`}
+        url={`/payment-status/${id}`}
       />
       <div className="min-h-screen bg-background">
         <Navbar />
-        <PaymentStatusPage transactionId={params.id} />
+        <PaymentStatusPage transactionId={id} />
       </div>
     </>
   )

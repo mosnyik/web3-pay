@@ -20,7 +20,7 @@ export default function Checkout() {
   return (
     <>
       <SEO title={pageSEO.title} description={pageSEO.description} keywords={pageSEO.keywords} url="/checkout" />
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen">
         <Navbar />
         <CheckoutPage />
       </div>
