@@ -5,7 +5,7 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Menu, CreditCard, History, Home, Wallet } from "lucide-react"
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
+import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
 import { WalletConnectButton } from "@/components/wallet-connect-button"
 import { WalletErrorBoundary } from "@/components/wallet-error-boundary"
 import { useWallet } from "@/lib/wallet/wallet-context"
@@ -90,6 +90,7 @@ export function Navbar() {
                 </Button>
               </SheetTrigger>
               <SheetContent side="right" className="w-[300px] sm:w-[400px] bg-slate-950 border-slate-800">
+                <SheetTitle className="sr-only">Navigation Menu</SheetTitle>
                 <div className="flex flex-col space-y-1 mt-8">
                   {navigation.map((item) => {
                     const active = isActive(item.href)
