@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { useConnectModal } from "@rainbow-me/rainbowkit"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -8,7 +9,6 @@ import { Button } from "@/components/ui/button"
 import { ChevronRight, Shield, ArrowLeft, RefreshCw } from "lucide-react"
 import { useWallet } from "@/lib/wallet/wallet-context"
 import { useEthereumWallet } from "@/lib/wallet/use-ethereum-wallet"
-import { EthereumWalletConnect } from "@/components/ethereum-wallet-connect"
 import { WalletInstallationIndicator } from "@/components/wallet-installation-indicator"
 import { TronWalletStatus } from "@/components/tron-wallet-status"
 import { EthereumIcon, BitcoinIcon, SolanaIcon, TronIcon } from "@/components/icons/chain-icons"
@@ -33,12 +33,20 @@ interface WalletConnectModalProps {
 export function WalletConnectModal({ isOpen, onClose, lockedChainId }: WalletConnectModalProps) {
   const { adapters, connect, status } = useWallet()
   const { isEthereumActive } = useEthereumWallet()
+  const { openConnectModal } = useConnectModal()
 
   const [selectedAdapterId, setSelectedAdapterId] = useState<string | null>(lockedChainId ?? null)
   const [isConnecting, setIsConnecting] = useState<string | null>(null)
   const [connectionError, setConnectionError] = useState<string | null>(null)
 
   const handleNetworkSelect = (adapterId: string) => {
+    if (adapterId === "ethereum") {
+      // Close our Dialog first, then open RainbowKit's modal
+      // so there's no z-index/overlay conflict
+      onClose()
+      openConnectModal?.()
+      return
+    }
     setSelectedAdapterId(adapterId)
     setConnectionError(null)
   }
@@ -210,27 +218,6 @@ export function WalletConnectModal({ isOpen, onClose, lockedChainId }: WalletCon
               </div>
             </div>
           </>
-        ) : selectedAdapter.id === "ethereum" ? (
-          // Ethereum RainbowKit Connection
-          <div className="text-center space-y-6">
-            <div className="text-center text-muted-foreground mb-6">Connect your Ethereum wallet using RainbowKit</div>
-
-            <div className="flex justify-center">
-              <EthereumWalletConnect />
-            </div>
-
-            <div className="p-4 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg">
-              <div className="flex items-start gap-3">
-                <Shield className="w-5 h-5 text-blue-600 dark:text-blue-400 mt-0.5" />
-                <div>
-                  <h4 className="font-medium text-blue-900 dark:text-blue-100 mb-1">Ethereum Wallets Supported</h4>
-                  <p className="text-sm text-blue-700 dark:text-blue-300">
-                    MetaMask, WalletConnect, Coinbase Wallet, Rainbow, and 300+ other wallets through WalletConnect.
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
         ) : (
           // Other Network Wallet Selection
           <>
